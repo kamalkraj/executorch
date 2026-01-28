@@ -362,9 +362,18 @@ class ET_EXPERIMENTAL MultimodalInput {
     return std::get_if<RawAudio>(&data_);
   }
 
+  // Getters/Setters for BOS/EOS overrides
+  int32_t get_num_bos() const { return num_bos_; }
+  void set_num_bos(int32_t num_bos) { num_bos_ = num_bos; }
+
+  int32_t get_num_eos() const { return num_eos_; }
+  void set_num_eos(int32_t num_eos) { num_eos_ = num_eos; }
+
  private:
   std::variant<std::string, std::vector<uint64_t>, Image, Audio, RawAudio>
       data_;
+  int32_t num_bos_ = -1;
+  int32_t num_eos_ = -1;
 };
 
 // Convenience factory functions

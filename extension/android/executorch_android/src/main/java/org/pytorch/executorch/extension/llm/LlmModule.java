@@ -513,6 +513,27 @@ public class LlmModule {
   private native int appendTextInput(String prompt);
 
   /**
+   * Prefill a multimodal Module with the given text input, specifying BOS/EOS tokens.
+   *
+   * @param prompt The text prompt to prefill.
+   * @param numBos Number of BOS tokens to prepend.
+   * @param numEos Number of EOS tokens to append.
+   * @return 0, as the updated starting position in KV cache of the input in the LLM is no longer
+   *     exposed to user.
+   * @throws RuntimeException if the prefill failed
+   */
+  @Experimental
+  public long prefillPrompt(String prompt, int numBos, int numEos) {
+    int nativeResult = appendTextInputWithBos(prompt, numBos, numEos);
+    if (nativeResult != 0) {
+      throw new RuntimeException("Prefill failed with error code: " + nativeResult);
+    }
+    return 0;
+  }
+
+  private native int appendTextInputWithBos(String prompt, int numBos, int numEos);
+
+  /**
    * Reset the context of the LLM. This will clear the KV cache and reset the state of the LLM.
    *
    * <p>The startPos will be reset to 0.

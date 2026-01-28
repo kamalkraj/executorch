@@ -151,10 +151,27 @@ Error MultimodalRunner::generate(
     }
     int32_t bos = 0;
     int32_t eos = 0;
-    if (i == 0 && input.is_text()) {
-      bos = config.num_bos;
-      eos = config.num_eos;
+
+    // Check for per-input overrides first
+    int32_t input_bos = input.get_num_bos();
+    int32_t input_eos = input.get_num_eos();
+
+    if (input.is_text()) {
+      if (input_bos != -1) {
+        bos = input_bos;
+      } else if (i == 0) {
+        // Fallback: only add BOS from config for the very first input
+        bos = config.num_bos;
+      }
+
+      if (input_eos != -1) {
+        eos = input_eos;
+      } else if (i == 0) {
+        // Fallback: only add EOS from config for the very first input (if any)
+        eos = config.num_eos;
+      }
     }
+
     auto prefill_result = multimodal_prefiller_->prefill(input, pos_, bos, eos);
     if (!prefill_result.ok()) {
       return prefill_result.error();

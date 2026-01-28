@@ -286,6 +286,18 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
   }
 
   // Returns status_code
+  jint append_text_input_with_bos(
+      facebook::jni::alias_ref<jstring> prompt,
+      jint num_bos,
+      jint num_eos) {
+    auto input = llm::MultimodalInput{prompt->toStdString()};
+    input.set_num_bos(num_bos);
+    input.set_num_eos(num_eos);
+    prefill_inputs_.emplace_back(std::move(input));
+    return 0;
+  }
+
+  // Returns status_code
   jint append_images_input(
       facebook::jni::alias_ref<jintArray> image,
       jint width,
@@ -470,6 +482,8 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
             "appendRawAudioInput", ExecuTorchLlmJni::append_raw_audio_input),
         makeNativeMethod(
             "appendTextInput", ExecuTorchLlmJni::append_text_input),
+        makeNativeMethod(
+            "appendTextInputWithBos", ExecuTorchLlmJni::append_text_input_with_bos),
         makeNativeMethod("resetContext", ExecuTorchLlmJni::reset_context),
     });
   }
