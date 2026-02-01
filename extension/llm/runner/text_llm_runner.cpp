@@ -199,6 +199,7 @@ Error TextLLMRunner::generate(
       pos_,
       max_new_tokens - 1,
       temperature_ == -1.0f ? config.temperature : temperature_,
+      config.topp,
       wrapped_callback);
   if (!generate_result.ok()) {
     return generate_result.error();

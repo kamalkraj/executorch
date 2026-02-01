@@ -60,13 +60,15 @@ class ET_EXPERIMENTAL TextDecoderRunner {
    * @param logits_tensor The logits tensor.
    * @param temperature The temperature parameter used to control randomness in
    * sampling.
+   * @param topp The top-p probability threshold for nucleus sampling.
    * @return The next token.
    */
   inline int32_t logits_to_token(
       const executorch::aten::Tensor& logits_tensor,
-      const float temperature = 0.0f) {
+      const float temperature = 0.0f,
+      const float topp = 0.9f) {
     return ::executorch::extension::llm::logits_to_token(
-        logits_tensor, temperature);
+        logits_tensor, temperature, topp);
   }
 
  protected:

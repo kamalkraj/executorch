@@ -121,6 +121,7 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
  private:
   friend HybridBase;
   float temperature_ = 0.0f;
+  float topp_ = 0.9f;
   int num_bos_ = 0;
   int num_eos_ = 0;
   int model_type_category_;
@@ -144,6 +145,7 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
       facebook::jni::alias_ref<jstring> model_path,
       facebook::jni::alias_ref<jstring> tokenizer_path,
       jfloat temperature,
+      jfloat topp,
       facebook::jni::alias_ref<facebook::jni::JList<jstring>::javaobject>
           data_files,
       jint num_bos,
@@ -153,6 +155,7 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
         model_path,
         tokenizer_path,
         temperature,
+        topp,
         data_files,
         num_bos,
         num_eos);
@@ -163,10 +166,12 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
       facebook::jni::alias_ref<jstring> model_path,
       facebook::jni::alias_ref<jstring> tokenizer_path,
       jfloat temperature,
+      jfloat topp,
       facebook::jni::alias_ref<jobject> data_files = nullptr,
       jint num_bos = 0,
       jint num_eos = 0) {
     temperature_ = temperature;
+    topp_ = topp;
     num_bos_ = num_bos;
     num_eos_ = num_eos;
 #if defined(ET_USE_THREADPOOL)
@@ -240,9 +245,11 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
       facebook::jni::alias_ref<ExecuTorchLlmCallbackJni> callback,
       jboolean echo,
       jfloat temperature,
+      jfloat topp,
       jint num_bos,
       jint num_eos) {
     float effective_temperature = temperature >= 0 ? temperature : temperature_;
+    float effective_topp = topp >= 0 ? topp : topp_;
     if (model_type_category_ == MODEL_TYPE_CATEGORY_MULTIMODAL) {
       std::vector<llm::MultimodalInput> inputs = prefill_inputs_;
       prefill_inputs_.clear();
@@ -253,6 +260,7 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
           .echo = static_cast<bool>(echo),
           .seq_len = seq_len,
           .temperature = effective_temperature,
+          .topp = effective_topp,
           .num_bos = num_bos,
           .num_eos = num_eos,
       };
@@ -266,6 +274,7 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
           .echo = static_cast<bool>(echo),
           .seq_len = seq_len,
           .temperature = effective_temperature,
+          .topp = effective_topp,
           .num_bos = num_bos,
           .num_eos = num_eos,
       };
@@ -428,6 +437,7 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
   }
 
   void reset_context() {
+    prefill_inputs_.clear();
     if (runner_ != nullptr) {
       runner_->reset();
     }
@@ -489,8 +499,73 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
   }
 };
 
+class ExecuTorchLlmTokenizerJni
+    : public facebook::jni::HybridClass<ExecuTorchLlmTokenizerJni> {
+ private:
+  friend HybridBase;
+  std::unique_ptr<tokenizers::Tokenizer> tokenizer_;
+
+ public:
+  constexpr static auto kJavaDescriptor =
+      "Lorg/pytorch/executorch/extension/llm/LlmTokenizer;";
+
+  static facebook::jni::local_ref<jhybriddata> initHybrid(
+      facebook::jni::alias_ref<jclass>,
+      facebook::jni::alias_ref<jstring> tokenizer_path) {
+    return makeCxxInstance(tokenizer_path);
+  }
+
+  ExecuTorchLlmTokenizerJni(facebook::jni::alias_ref<jstring> tokenizer_path) {
+    tokenizer_ = llm::load_tokenizer(tokenizer_path->toStdString());
+    if (!tokenizer_) {
+      executorch::jni_helper::throwExecutorchException(
+          static_cast<uint32_t>(Error::InvalidArgument),
+          "Failed to load tokenizer");
+    }
+  }
+
+  facebook::jni::local_ref<jlongArray> encode(
+      facebook::jni::alias_ref<jstring> text,
+      jint bos,
+      jint eos) {
+    auto result = tokenizer_->encode(text->toStdString(), bos, eos);
+    if (!result.ok()) {
+      executorch::jni_helper::throwExecutorchException(
+          static_cast<uint32_t>(result.error()), "Encoding failed");
+      return nullptr;
+    }
+    const std::vector<uint64_t>& tokens = result.get();
+    auto jtokens = facebook::jni::make_long_array(tokens.size());
+    // Copy data. jlong is int64_t, tokens are uint64_t.
+    // We can interpret them as signed for Java side storage.
+    jtokens->setRegion(
+        0, tokens.size(), reinterpret_cast<const jlong*>(tokens.data()));
+    return jtokens;
+  }
+
+  facebook::jni::local_ref<jstring> decode(jlong prev_token, jlong token) {
+    auto result = tokenizer_->decode(
+        static_cast<uint64_t>(prev_token), static_cast<uint64_t>(token));
+    if (!result.ok()) {
+      executorch::jni_helper::throwExecutorchException(
+          static_cast<uint32_t>(result.error()), "Decoding failed");
+      return nullptr;
+    }
+    return facebook::jni::make_jstring(result.get());
+  }
+
+  static void registerNatives() {
+    registerHybrid({
+        makeNativeMethod("initHybrid", ExecuTorchLlmTokenizerJni::initHybrid),
+        makeNativeMethod("encode", ExecuTorchLlmTokenizerJni::encode),
+        makeNativeMethod("decode", ExecuTorchLlmTokenizerJni::decode),
+    });
+  }
+};
+
 } // namespace executorch_jni
 
 void register_natives_for_llm() {
   executorch_jni::ExecuTorchLlmJni::registerNatives();
+  executorch_jni::ExecuTorchLlmTokenizerJni::registerNatives();
 }

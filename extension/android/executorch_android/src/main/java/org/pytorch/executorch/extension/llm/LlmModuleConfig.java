@@ -17,6 +17,7 @@ public class LlmModuleConfig {
   private final String modulePath;
   private final String tokenizerPath;
   private final float temperature;
+  private final float topp;
   private final String dataPath;
   private final int modelType;
   private final int numBos;
@@ -26,6 +27,7 @@ public class LlmModuleConfig {
     this.modulePath = builder.modulePath;
     this.tokenizerPath = builder.tokenizerPath;
     this.temperature = builder.temperature;
+    this.topp = builder.topp;
     this.dataPath = builder.dataPath;
     this.modelType = builder.modelType;
     this.numBos = builder.numBos;
@@ -73,6 +75,13 @@ public class LlmModuleConfig {
   }
 
   /**
+   * @return Top-p value for sampling
+   */
+  public float getTopp() {
+    return topp;
+  }
+
+  /**
    * @return Optional path to additional data files
    */
   public String getDataPath() {
@@ -110,6 +119,7 @@ public class LlmModuleConfig {
     private String modulePath;
     private String tokenizerPath;
     private float temperature = 0.8f;
+    private float topp = 0.9f;
     private String dataPath = "";
     private int modelType = MODEL_TYPE_TEXT;
     private int numBos = 0;
@@ -147,6 +157,17 @@ public class LlmModuleConfig {
      */
     public Builder temperature(float temperature) {
       this.temperature = temperature;
+      return this;
+    }
+
+    /**
+     * Sets the top-p for sampling generation.
+     *
+     * @param topp top-p value (typical range 0.0-1.0)
+     * @return This builder instance for method chaining
+     */
+    public Builder topp(float topp) {
+      this.topp = topp;
       return this;
     }
 

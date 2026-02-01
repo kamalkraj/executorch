@@ -49,6 +49,9 @@ struct GenerationConfig {
   // Temperature for sampling (higher = more random)
   float temperature = 0.8f;
 
+  // Top-P sampling threshold
+  float topp = 0.9f;
+
   // Number of eos and bos to add to the prompt
   int32_t num_bos = 0;
   int32_t num_eos = 0;

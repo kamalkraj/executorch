@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <ctime>
+
 #include <executorch/extension/llm/sampler/sampler.h>
 #include <executorch/runtime/core/exec_aten/exec_aten.h>
 
@@ -20,11 +22,13 @@ namespace llm {
  * @param logits_tensor The logits tensor.
  * @param temperature The temperature parameter used to control randomness in
  * sampling.
+ * @param topp The top-p probability threshold for nucleus sampling.
  * @return The next token.
  */
 inline int32_t logits_to_token(
     const executorch::aten::Tensor& logits_tensor,
-    const float temperature = 0.0f) {
+    const float temperature = 0.0f,
+    const float topp = 0.9f) {
   int32_t result = 0;
 
   // Create a minimal context for error handling in ET_SWITCH
@@ -54,7 +58,11 @@ inline int32_t logits_to_token(
           logits += (num_tokens - 1) * vocab_size;
         }
         // @lint-ignore CLANGTIDY facebook-hte-Deprecated
-        Sampler sampler(vocab_size, temperature);
+        Sampler sampler(
+            vocab_size,
+            temperature,
+            topp,
+            static_cast<unsigned long long>(std::time(nullptr)));
         result = sampler.sample(logits);
       });
   return result;

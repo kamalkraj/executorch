@@ -225,6 +225,7 @@ Error MultimodalRunner::generate(
       /*max_new_tokens=*/max_new_tokens -
           1, // Subtract 1 because prefill already generated 1 token
       /*temperature=*/config.temperature,
+      /*topp=*/config.topp,
       /*token_callback=*/wrapped_callback);
   if (!generate_result.ok()) {
     return generate_result.error();

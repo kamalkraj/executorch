@@ -171,6 +171,7 @@ PYBIND11_MODULE(_llm_runner, m) {
                       bool warming,
                       int32_t seq_len,
                       float temperature,
+                      float topp,
                       int32_t num_bos,
                       int32_t num_eos) {
             GenerationConfig cfg;
@@ -179,6 +180,7 @@ PYBIND11_MODULE(_llm_runner, m) {
             cfg.warming = warming;
             cfg.seq_len = seq_len;
             cfg.temperature = temperature;
+            cfg.topp = topp;
             cfg.num_bos = num_bos;
             cfg.num_eos = num_eos;
             return cfg;
@@ -188,6 +190,7 @@ PYBIND11_MODULE(_llm_runner, m) {
           py::arg("warming") = false,
           py::arg("seq_len") = -1,
           py::arg("temperature") = 0.8f,
+          py::arg("topp") = 0.9f,
           py::arg("num_bos") = 0,
           py::arg("num_eos") = 0)
       .def_readwrite("echo", &GenerationConfig::echo)
@@ -195,6 +198,7 @@ PYBIND11_MODULE(_llm_runner, m) {
       .def_readwrite("warming", &GenerationConfig::warming)
       .def_readwrite("seq_len", &GenerationConfig::seq_len)
       .def_readwrite("temperature", &GenerationConfig::temperature)
+      .def_readwrite("topp", &GenerationConfig::topp)
       .def_readwrite("num_bos", &GenerationConfig::num_bos)
       .def_readwrite("num_eos", &GenerationConfig::num_eos)
       .def(
@@ -208,6 +212,7 @@ PYBIND11_MODULE(_llm_runner, m) {
             std::to_string(config.max_new_tokens) +
             " seq_len=" + std::to_string(config.seq_len) +
             " temperature=" + std::to_string(config.temperature) +
+            " topp=" + std::to_string(config.topp) +
             " echo=" + (config.echo ? "True" : "False") +
             " warming=" + (config.warming ? "True" : "False") + ">";
       });

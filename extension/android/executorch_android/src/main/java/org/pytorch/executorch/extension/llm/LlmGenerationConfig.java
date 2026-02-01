@@ -21,6 +21,7 @@ public class LlmGenerationConfig {
   private final boolean warming;
   private final int seqLen;
   private final float temperature;
+  private final float topp;
   private final int numBos;
   private final int numEos;
 
@@ -30,6 +31,7 @@ public class LlmGenerationConfig {
     this.warming = builder.warming;
     this.seqLen = builder.seqLen;
     this.temperature = builder.temperature;
+    this.topp = builder.topp;
     this.numBos = builder.numBos;
     this.numEos = builder.numEos;
   }
@@ -79,6 +81,13 @@ public class LlmGenerationConfig {
   }
 
   /**
+   * @return top-p value for nucleus sampling
+   */
+  public float getTopp() {
+    return topp;
+  }
+
+  /**
    * @return number of BOS tokens to prepend
    */
   public int getNumBos() {
@@ -104,6 +113,7 @@ public class LlmGenerationConfig {
     private boolean warming = false;
     private int seqLen = -1;
     private float temperature = 0.8f;
+    private float topp = 0.9f;
     private int numBos = 0;
     private int numEos = 0;
 
@@ -161,6 +171,17 @@ public class LlmGenerationConfig {
      */
     public Builder temperature(float temperature) {
       this.temperature = temperature;
+      return this;
+    }
+
+    /**
+     * Sets the top-p value for nucleus sampling.
+     *
+     * @param topp top-p value (typical range 0.0-1.0)
+     * @return this builder instance
+     */
+    public Builder topp(float topp) {
+      this.topp = topp;
       return this;
     }
 

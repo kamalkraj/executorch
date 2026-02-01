@@ -45,6 +45,7 @@ class ET_EXPERIMENTAL TextTokenGenerator {
    * logits before applying softmax. A higher temperature results in more
    * random predictions, while a lower temperature results in more deterministic
    * predictions.
+   * @param topp The top-p probability threshold for nucleus sampling.
    * @param token_callback what to do after a token is generated.
    * @return how many tokens are generated.
    */
@@ -53,6 +54,7 @@ class ET_EXPERIMENTAL TextTokenGenerator {
       int64_t start_pos,
       int32_t max_new_tokens,
       float temperature = 0.0f,
+      float topp = 0.9f,
       const std::function<void(const std::string&)>& token_callback = {}) {
     ET_CHECK_MSG(
         !tokens.empty(), "Token generation loop shouldn't take empty tokens");
@@ -92,8 +94,8 @@ class ET_EXPERIMENTAL TextTokenGenerator {
       prev_token = cur_token;
 
       stats_->on_sampling_begin();
-      cur_token =
-          text_decoder_runner_->logits_to_token(logits_tensor, temperature);
+      cur_token = text_decoder_runner_->logits_to_token(
+          logits_tensor, temperature, topp);
       stats_->on_sampling_end();
 
       pos++;

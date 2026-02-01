@@ -32,6 +32,7 @@ public class LlmModule {
   private static final int DEFAULT_SEQ_LEN = 128;
   private static final boolean DEFAULT_ECHO = true;
   private static final float DEFAULT_TEMPERATURE = -1.0f;
+  private static final float DEFAULT_TOPP = -1.0f;
   private static final int DEFAULT_BOS = 0;
   private static final int DEFAULT_EOS = 0;
 
@@ -41,6 +42,7 @@ public class LlmModule {
       String modulePath,
       String tokenizerPath,
       float temperature,
+      float topp,
       List<String> dataFiles,
       int numBos,
       int numEos);
@@ -54,6 +56,7 @@ public class LlmModule {
       String modulePath,
       String tokenizerPath,
       float temperature,
+      float topp,
       List<String> dataFiles,
       int numBos,
       int numEos) {
@@ -70,7 +73,37 @@ public class LlmModule {
 
     mHybridData =
         initHybrid(
-            modelType, modulePath, tokenizerPath, temperature, dataFiles, numBos, numEos);
+            modelType,
+            modulePath,
+            tokenizerPath,
+            temperature,
+            topp,
+            dataFiles,
+            numBos,
+            numEos);
+  }
+
+  /**
+   * Constructs a LLM Module for a model with given type, model path, tokenizer, temperature, and
+   * dataFiles.
+   */
+  public LlmModule(
+      int modelType,
+      String modulePath,
+      String tokenizerPath,
+      float temperature,
+      List<String> dataFiles,
+      int numBos,
+      int numEos) {
+    this(
+        modelType,
+        modulePath,
+        tokenizerPath,
+        temperature,
+        DEFAULT_TOPP,
+        dataFiles,
+        numBos,
+        numEos);
   }
 
   /**
@@ -156,7 +189,8 @@ public class LlmModule {
         config.getModulePath(),
         config.getTokenizerPath(),
         config.getTemperature(),
-        config.getDataPath(),
+        config.getTopp(),
+        config.getDataPath() != null ? List.of(config.getDataPath()) : List.of(),
         config.getNumBos(),
         config.getNumEos());
   }
@@ -178,6 +212,7 @@ public class LlmModule {
         llmCallback,
         DEFAULT_ECHO,
         DEFAULT_TEMPERATURE,
+        DEFAULT_TOPP,
         DEFAULT_BOS,
         DEFAULT_EOS);
   }
@@ -191,15 +226,12 @@ public class LlmModule {
    */
   public int generate(String prompt, int seqLen, LlmCallback llmCallback) {
     return generate(
-        null,
-        0,
-        0,
-        0,
         prompt,
         seqLen,
         llmCallback,
         DEFAULT_ECHO,
         DEFAULT_TEMPERATURE,
+        DEFAULT_TOPP,
         DEFAULT_BOS,
         DEFAULT_EOS);
   }
@@ -222,6 +254,7 @@ public class LlmModule {
         llmCallback,
         echo,
         DEFAULT_TEMPERATURE,
+        DEFAULT_TOPP,
         DEFAULT_BOS,
         DEFAULT_EOS);
   }
@@ -235,7 +268,8 @@ public class LlmModule {
    * @param echo indicate whether to echo the input prompt or not (text completion vs chat)
    */
   public int generate(String prompt, int seqLen, LlmCallback llmCallback, boolean echo) {
-    return generate(prompt, seqLen, llmCallback, echo, DEFAULT_TEMPERATURE);
+    return generate(
+        prompt, seqLen, llmCallback, echo, DEFAULT_TEMPERATURE, DEFAULT_TOPP, DEFAULT_BOS, DEFAULT_EOS);
   }
 
   /**
@@ -255,6 +289,7 @@ public class LlmModule {
       LlmCallback llmCallback,
       boolean echo,
       float temperature,
+      float topp,
       int numBos,
       int numEos);
 
@@ -269,9 +304,11 @@ public class LlmModule {
     int seqLen = config.getSeqLen();
     boolean echo = config.isEcho();
     float temperature = config.getTemperature();
+    float topp = config.getTopp();
     int numBos = config.getNumBos();
     int numEos = config.getNumEos();
-    return generate(null, 0, 0, 0, prompt, seqLen, llmCallback, echo, temperature, numBos, numEos);
+    return generate(
+        null, 0, 0, 0, prompt, seqLen, llmCallback, echo, temperature, topp, numBos, numEos);
   }
 
   /**
@@ -305,6 +342,7 @@ public class LlmModule {
         llmCallback,
         echo,
         DEFAULT_TEMPERATURE,
+        DEFAULT_TOPP,
         DEFAULT_BOS,
         DEFAULT_EOS);
   }
@@ -342,6 +380,7 @@ public class LlmModule {
         llmCallback,
         echo,
         temperature,
+        DEFAULT_TOPP,
         DEFAULT_BOS,
         DEFAULT_EOS);
   }
@@ -371,13 +410,14 @@ public class LlmModule {
       LlmCallback llmCallback,
       boolean echo,
       float temperature,
+      float topp,
       int numBos,
       int numEos) {
     prefillPrompt(prompt);
     if (image != null) {
       prefillImages(image, width, height, channels);
     }
-    return generate(prompt, seqLen, llmCallback, echo, temperature, numBos, numEos);
+    return generate(prompt, seqLen, llmCallback, echo, temperature, topp, numBos, numEos);
   }
 
   /**
