@@ -149,7 +149,8 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
       facebook::jni::alias_ref<facebook::jni::JList<jstring>::javaobject>
           data_files,
       jint num_bos,
-      jint num_eos) {
+      jint num_eos,
+      jint prefill_chunk_size) {
     return makeCxxInstance(
         model_type_category,
         model_path,
@@ -158,7 +159,8 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
         topp,
         data_files,
         num_bos,
-        num_eos);
+        num_eos,
+        prefill_chunk_size);
   }
 
   ExecuTorchLlmJni(
@@ -169,7 +171,8 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
       jfloat topp,
       facebook::jni::alias_ref<jobject> data_files = nullptr,
       jint num_bos = 0,
-      jint num_eos = 0) {
+      jint num_eos = 0,
+      jint prefill_chunk_size = 0) {
     temperature_ = temperature;
     topp_ = topp;
     num_bos_ = num_bos;
@@ -188,9 +191,16 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
     model_type_category_ = model_type_category;
     std::vector<std::string> data_files_vector;
     if (model_type_category == MODEL_TYPE_CATEGORY_MULTIMODAL) {
+      std::optional<int32_t> prefill_chunk_size_opt = std::nullopt;
+      if (prefill_chunk_size > 0) {
+        prefill_chunk_size_opt = prefill_chunk_size;
+      }
       multi_modal_runner_ = llm::create_multimodal_runner(
-          model_path->toStdString().c_str(),
-          llm::load_tokenizer(tokenizer_path->toStdString()));
+          model_path->toStdString(),
+          llm::load_tokenizer(tokenizer_path->toStdString()),
+          std::nullopt,
+          executorch::extension::Module::LoadMode::File,
+          prefill_chunk_size_opt);
     } else if (model_type_category == MODEL_TYPE_CATEGORY_LLM) {
       if (data_files != nullptr) {
         // Convert Java List<String> to C++ std::vector<string>

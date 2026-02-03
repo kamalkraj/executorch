@@ -22,6 +22,7 @@ public class LlmModuleConfig {
   private final int modelType;
   private final int numBos;
   private final int numEos;
+  private final int prefillChunkSize;
 
   private LlmModuleConfig(Builder builder) {
     this.modulePath = builder.modulePath;
@@ -32,6 +33,7 @@ public class LlmModuleConfig {
     this.modelType = builder.modelType;
     this.numBos = builder.numBos;
     this.numEos = builder.numEos;
+    this.prefillChunkSize = builder.prefillChunkSize;
   }
 
   /** Model type constant for text-only models. */
@@ -110,6 +112,13 @@ public class LlmModuleConfig {
   }
 
   /**
+   * @return Max sequence length for prefill chunks. 0 means use model default.
+   */
+  public int getPrefillChunkSize() {
+    return prefillChunkSize;
+  }
+
+  /**
    * Builder class for constructing LlmModuleConfig instances with optional parameters.
    *
    * <p>The builder provides a fluent interface for configuring model parameters and validates
@@ -124,6 +133,7 @@ public class LlmModuleConfig {
     private int modelType = MODEL_TYPE_TEXT;
     private int numBos = 0;
     private int numEos = 0;
+    private int prefillChunkSize = 0;
 
     Builder() {}
 
@@ -212,6 +222,17 @@ public class LlmModuleConfig {
      */
     public Builder numEos(int numEos) {
       this.numEos = numEos;
+      return this;
+    }
+
+    /**
+     * Sets the max sequence length for prefill chunks.
+     *
+     * @param prefillChunkSize Max sequence length for prefill chunks.
+     * @return This builder instance for method chaining
+     */
+    public Builder prefillChunkSize(int prefillChunkSize) {
+      this.prefillChunkSize = prefillChunkSize;
       return this;
     }
 

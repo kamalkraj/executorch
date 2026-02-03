@@ -45,7 +45,8 @@ public class LlmModule {
       float topp,
       List<String> dataFiles,
       int numBos,
-      int numEos);
+      int numEos,
+      int prefillChunkSize);
 
   /**
    * Constructs a LLM Module for a model with given type, model path, tokenizer, temperature, and
@@ -60,6 +61,32 @@ public class LlmModule {
       List<String> dataFiles,
       int numBos,
       int numEos) {
+    this(
+        modelType,
+        modulePath,
+        tokenizerPath,
+        temperature,
+        topp,
+        dataFiles,
+        numBos,
+        numEos,
+        0);
+  }
+
+  /**
+   * Constructs a LLM Module for a model with given type, model path, tokenizer, temperature,
+   * dataFiles, BOS/EOS counts, and prefill chunk size.
+   */
+  public LlmModule(
+      int modelType,
+      String modulePath,
+      String tokenizerPath,
+      float temperature,
+      float topp,
+      List<String> dataFiles,
+      int numBos,
+      int numEos,
+      int prefillChunkSize) {
     ExecuTorchRuntime runtime = ExecuTorchRuntime.getRuntime();
 
     File modelFile = new File(modulePath);
@@ -80,7 +107,8 @@ public class LlmModule {
             topp,
             dataFiles,
             numBos,
-            numEos);
+            numEos,
+            prefillChunkSize);
   }
 
   /**
@@ -192,7 +220,8 @@ public class LlmModule {
         config.getTopp(),
         config.getDataPath() != null ? List.of(config.getDataPath()) : List.of(),
         config.getNumBos(),
-        config.getNumEos());
+        config.getNumEos(),
+        config.getPrefillChunkSize());
   }
 
   public void resetNative() {
