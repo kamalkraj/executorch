@@ -274,7 +274,8 @@ std::unique_ptr<MultimodalRunner> create_multimodal_runner(
     const std::string& model_path,
     std::unique_ptr<::tokenizers::Tokenizer> tokenizer,
     std::optional<const std::string> data_path,
-    Module::LoadMode load_mode) {
+    Module::LoadMode load_mode,
+    std::optional<int32_t> prefill_chunk_size) {
   // Sanity check tokenizer
   if (!tokenizer || !tokenizer->is_loaded()) {
     ET_LOG(Error, "Tokenizer is null or not loaded");
@@ -308,12 +309,19 @@ std::unique_ptr<MultimodalRunner> create_multimodal_runner(
   auto text_decoder_runner =
       std::make_unique<MultimodalDecoderRunner>(module.get(), io_manager.get());
 
+  int32_t actual_prefill_chunk_size = metadata.at(kMaxSeqLen);
+  if (prefill_chunk_size.has_value()) {
+    actual_prefill_chunk_size = prefill_chunk_size.value();
+    ET_LOG(Info, "Overriding prefill chunk size to %d", actual_prefill_chunk_size);
+  }
+
   // Create multimodal_prefiller
   auto multimodal_prefiller = std::make_unique<MultimodalPrefiller>(
       module.get(),
       text_decoder_runner.get(),
       tokenizer.get(),
-      io_manager.get());
+      io_manager.get(),
+      actual_prefill_chunk_size);
 
   // Create text_token_generator with stats
   auto stats = std::make_unique<Stats>();

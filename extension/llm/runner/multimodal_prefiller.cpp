@@ -21,11 +21,55 @@ MultimodalPrefiller::MultimodalPrefiller(
     Module* module,
     MultimodalDecoderRunner* decoder_runner,
     Tokenizer* tokenizer,
-    IOManager* io_manager)
+    IOManager* io_manager,
+    int64_t prefill_chunk_size)
     : module_(module),
       text_decoder_runner_(decoder_runner),
       tokenizer_(tokenizer),
-      io_manager_(io_manager) {}
+      io_manager_(io_manager),
+      prefill_chunk_size_(prefill_chunk_size > 0 ? prefill_chunk_size : 128) {}
+
+Result<uint64_t> MultimodalPrefiller::prefill_decoder(
+    ::executorch::runtime::EValue encoder_output,
+    int64_t& start_pos) {
+  // 2. Run decoder model for prefill.
+
+  // Get expected shape of cache position tensor, which should be the second
+  // argument
+
+  int64_t seq_len = encoder_output.toTensor().size(1);
+  if (seq_len == 0) {
+    ET_LOG(Error, "The encoder returned an empty output.");
+    return ::executorch::runtime::Error::InvalidState;
+  }
+  std::vector<int64_t> cache_positions;
+
+  auto cache_position_result = populate_start_pos_or_cache_position(
+      module_, start_pos, cache_positions, seq_len, kTextModelMethod);
+  ET_CHECK_OK_OR_RETURN_ERROR(cache_position_result.error());
+  auto cache_position_tensor = cache_position_result.get();
+
+  auto prefill_result = module_->execute(
+      kTextModelMethod, {encoder_output, cache_position_tensor});
+  if (prefill_result.error() != ::executorch::runtime::Error::Ok) {
+    return prefill_result.error();
+  }
+  // Check if prefill_outputs is empty, if it is return error and log that the
+  // specified encoder returned empty results when used to prefill decoder.
+  auto prefill_outputs = prefill_result.get();
+  if (prefill_outputs.empty()) {
+    ET_LOG(
+        Error, "Encoder returned empty results when used to prefill decoder");
+    return ::executorch::runtime::Error::InvalidState;
+  }
+  auto outputs_res = prefill_outputs[0].toTensor();
+
+  // Update start_pos, tracking the current cache position.
+  start_pos += seq_len;
+
+  return static_cast<uint64_t>(
+      text_decoder_runner_->logits_to_token(outputs_res));
+}
 
 /**
  * Prefill an LLM Module with the given multimodal input.
@@ -40,7 +84,6 @@ Result<uint64_t> MultimodalPrefiller::prefill(
     int32_t bos,
     int32_t eos) {
   // 1. Run encoder model.
-  ::executorch::runtime::EValue encoder_output;
   if (input.is_image()) {
     const Image& image = input.get_image();
 
@@ -80,7 +123,7 @@ Result<uint64_t> MultimodalPrefiller::prefill(
       ET_CHECK_OR_RETURN_ERROR(
           false,
           NotSupported,
-          "Unsupported image encoder input dtype: %s",
+          "Unsupported image_encoder_input_dtype: %s",
           ::executorch::runtime::toString(expected_dtype));
     }
 
@@ -113,7 +156,8 @@ Result<uint64_t> MultimodalPrefiller::prefill(
     ET_CHECK_OK_OR_RETURN_ERROR(image_encoder_result.error());
     auto image_encoder_outputs = image_encoder_result.get();
 
-    encoder_output = image_encoder_outputs[0];
+    return prefill_decoder(image_encoder_outputs[0], start_pos);
+
   } else if (input.is_audio()) {
     const Audio& audio = input.get_audio();
 
@@ -173,7 +217,8 @@ Result<uint64_t> MultimodalPrefiller::prefill(
     }
     auto audio_encoder_outputs = audio_encoder_result.get();
 
-    encoder_output = audio_encoder_outputs[0];
+    return prefill_decoder(audio_encoder_outputs[0], start_pos);
+
   } else if (input.is_text() || input.is_tokens()) {
     std::vector<uint64_t> tokens;
     if (input.is_text()) {
@@ -191,61 +236,40 @@ Result<uint64_t> MultimodalPrefiller::prefill(
       tokens = input.get_tokens();
     }
 
-    auto text_tensor = executorch::extension::from_blob(
-        tokens.data(),
-        {1, static_cast<aten::SizesType>(tokens.size())},
-        ::executorch::aten::ScalarType::Long);
+    // Process tokens in chunks if they exceed prefill_chunk_size_
+    int32_t num_prompt_tokens = tokens.size();
+    uint64_t cur_token = 0;
+    int num_tokens_to_process = 0;
 
-    // Run text encoder (token embeddings)
-    auto token_embedding_result =
-        module_->execute(kTokenEmbeddingMethod, text_tensor);
-    ET_CHECK_OK_OR_RETURN_ERROR(token_embedding_result.error());
-    auto token_embedding_outputs = token_embedding_result.get();
+    while (num_tokens_to_process < num_prompt_tokens) {
+      auto num_tokens_to_prefill_with = std::min<int>(
+          num_prompt_tokens - num_tokens_to_process, prefill_chunk_size_);
 
-    encoder_output = token_embedding_outputs[0];
+      auto text_tensor = executorch::extension::from_blob(
+          tokens.data() + num_tokens_to_process,
+          {1, static_cast<aten::SizesType>(num_tokens_to_prefill_with)},
+          ::executorch::aten::ScalarType::Long);
+
+      // Run text encoder (token embeddings)
+      auto token_embedding_result =
+          module_->execute(kTokenEmbeddingMethod, text_tensor);
+      ET_CHECK_OK_OR_RETURN_ERROR(token_embedding_result.error());
+      auto token_embedding_outputs = token_embedding_result.get();
+
+      auto decoder_res =
+          prefill_decoder(token_embedding_outputs[0], start_pos);
+      ET_CHECK_OK_OR_RETURN_ERROR(decoder_res.error());
+      cur_token = decoder_res.get();
+
+      num_tokens_to_process += num_tokens_to_prefill_with;
+    }
+    return cur_token;
+
   } else {
     ET_LOG(Error, "Unsupported input type");
     // For any other input types, return error
     return ::executorch::runtime::Error::NotSupported;
   }
-
-  // 2. Run decoder model for prefill.
-
-  // Get expected shape of cache position tensor, which should be the second
-  // argument
-
-  int64_t seq_len = encoder_output.toTensor().size(1);
-  if (seq_len == 0) {
-    ET_LOG(Error, "The encoder returned an empty output.");
-    return ::executorch::runtime::Error::InvalidState;
-  }
-  std::vector<int64_t> cache_positions;
-
-  auto cache_position_result = populate_start_pos_or_cache_position(
-      module_, start_pos, cache_positions, seq_len, kTextModelMethod);
-  ET_CHECK_OK_OR_RETURN_ERROR(cache_position_result.error());
-  auto cache_position_tensor = cache_position_result.get();
-
-  auto prefill_result = module_->execute(
-      kTextModelMethod, {encoder_output, cache_position_tensor});
-  if (prefill_result.error() != ::executorch::runtime::Error::Ok) {
-    return prefill_result.error();
-  }
-  // Check if prefill_outputs is empty, if it is return error and log that the
-  // specified encoder returned empty results when used to prefill decoder.
-  auto prefill_outputs = prefill_result.get();
-  if (prefill_outputs.empty()) {
-    ET_LOG(
-        Error, "Encoder returned empty results when used to prefill decoder");
-    return ::executorch::runtime::Error::InvalidState;
-  }
-  auto outputs_res = prefill_outputs[0].toTensor();
-
-  // Update start_pos, tracking the current cache position.
-  start_pos += seq_len;
-
-  return static_cast<uint64_t>(
-      text_decoder_runner_->logits_to_token(outputs_res));
 }
 
 /**

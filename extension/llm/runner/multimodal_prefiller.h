@@ -33,7 +33,8 @@ class ET_EXPERIMENTAL MultimodalPrefiller {
       Module* module,
       MultimodalDecoderRunner* decoder_runner,
       Tokenizer* tokenizer,
-      IOManager* io_manager);
+      IOManager* io_manager,
+      int64_t prefill_chunk_size = 128);
 
   /**
    * Prefill an LLM Module with the given multimodal input.
@@ -54,10 +55,15 @@ class ET_EXPERIMENTAL MultimodalPrefiller {
   virtual ~MultimodalPrefiller() = default;
 
  protected:
+  Result<uint64_t> prefill_decoder(
+      ::executorch::runtime::EValue encoder_output,
+      int64_t& start_pos);
+
   Module* module_;
   MultimodalDecoderRunner* text_decoder_runner_;
   Tokenizer* tokenizer_;
   IOManager* io_manager_;
+  int64_t prefill_chunk_size_;
 };
 
 } // namespace executorch::extension::llm

@@ -142,6 +142,7 @@ ET_EXPERIMENTAL std::unique_ptr<MultimodalRunner> create_multimodal_runner(
     const std::string& model_path,
     std::unique_ptr<::tokenizers::Tokenizer> tokenizer,
     std::optional<const std::string> data_path = std::nullopt,
-    Module::LoadMode load_mode = Module::LoadMode::File);
+    Module::LoadMode load_mode = Module::LoadMode::File,
+    std::optional<int32_t> prefill_chunk_size = std::nullopt);
 
 } // namespace executorch::extension::llm

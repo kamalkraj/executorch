@@ -343,19 +343,12 @@ class MultimodalRunner:
     """Runner for multimodal language models."""
 
     def __init__(
-        self, model_path: str, tokenizer_path: str, data_path: Optional[str] = None
-    ) -> None:
-        """
-        Initialize a MultimodalRunner.
-
-        Args:
-            model_path: Path to the model file (.pte)
-            tokenizer_path: Path to the tokenizer file
-            data_path: Optional path to additional data file
-        Raises:
-            RuntimeError: If initialization fails
-        """
-        ...
+        self,
+        model_path: str,
+        tokenizer_path: str,
+        data_path: Optional[str] = None,
+        prefill_chunk_size: Optional[int] = None,
+    ) -> None: ...
 
     def generate(
         self,

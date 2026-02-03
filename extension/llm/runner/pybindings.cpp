@@ -49,7 +49,8 @@ class PyMultimodalRunner {
   PyMultimodalRunner(
       const std::string& model_path,
       const std::string& tokenizer_path,
-      std::optional<const std::string> data_path = std::nullopt) {
+      std::optional<const std::string> data_path = std::nullopt,
+      std::optional<int32_t> prefill_chunk_size = std::nullopt) {
     // Load tokenizer using the helper function
     auto tokenizer =
         load_tokenizer(tokenizer_path, nullptr, std::nullopt, 0, 0);
@@ -59,8 +60,8 @@ class PyMultimodalRunner {
     }
 
     // Create multimodal runner using the helper function
-    runner_ =
-        create_multimodal_runner(model_path, std::move(tokenizer), data_path);
+    runner_ = create_multimodal_runner(
+        model_path, std::move(tokenizer), data_path, Module::LoadMode::File, prefill_chunk_size);
     if (!runner_) {
       throw std::runtime_error(
           "Failed to create multimodal runner with model: " + model_path);
@@ -612,10 +613,12 @@ PYBIND11_MODULE(_llm_runner, m) {
           py::init<
               const std::string&,
               const std::string&,
-              std::optional<const std::string>>(),
+              std::optional<const std::string>,
+              std::optional<int32_t>>(),
           py::arg("model_path"),
           py::arg("tokenizer_path"),
           py::arg("data_path") = py::none(),
+          py::arg("prefill_chunk_size") = py::none(),
           "Initialize a MultimodalRunner with model and tokenizer paths")
       .def(
           "generate",
