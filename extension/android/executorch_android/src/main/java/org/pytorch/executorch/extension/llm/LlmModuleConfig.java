@@ -23,6 +23,8 @@ public class LlmModuleConfig {
   private final int numBos;
   private final int numEos;
   private final int prefillChunkSize;
+  private final boolean loadVisionEncoder;
+  private final boolean loadAudioEncoder;
 
   private LlmModuleConfig(Builder builder) {
     this.modulePath = builder.modulePath;
@@ -34,6 +36,8 @@ public class LlmModuleConfig {
     this.numBos = builder.numBos;
     this.numEos = builder.numEos;
     this.prefillChunkSize = builder.prefillChunkSize;
+    this.loadVisionEncoder = builder.loadVisionEncoder;
+    this.loadAudioEncoder = builder.loadAudioEncoder;
   }
 
   /** Model type constant for text-only models. */
@@ -119,6 +123,20 @@ public class LlmModuleConfig {
   }
 
   /**
+   * @return Whether to load vision encoder
+   */
+  public boolean getLoadVisionEncoder() {
+    return loadVisionEncoder;
+  }
+
+  /**
+   * @return Whether to load audio encoder
+   */
+  public boolean getLoadAudioEncoder() {
+    return loadAudioEncoder;
+  }
+
+  /**
    * Builder class for constructing LlmModuleConfig instances with optional parameters.
    *
    * <p>The builder provides a fluent interface for configuring model parameters and validates
@@ -134,6 +152,8 @@ public class LlmModuleConfig {
     private int numBos = 0;
     private int numEos = 0;
     private int prefillChunkSize = 0;
+    private boolean loadVisionEncoder = true;
+    private boolean loadAudioEncoder = true;
 
     Builder() {}
 
@@ -233,6 +253,28 @@ public class LlmModuleConfig {
      */
     public Builder prefillChunkSize(int prefillChunkSize) {
       this.prefillChunkSize = prefillChunkSize;
+      return this;
+    }
+
+    /**
+     * Sets whether to load vision encoder.
+     *
+     * @param loadVisionEncoder Whether to load vision encoder
+     * @return This builder instance for method chaining
+     */
+    public Builder loadVisionEncoder(boolean loadVisionEncoder) {
+      this.loadVisionEncoder = loadVisionEncoder;
+      return this;
+    }
+
+    /**
+     * Sets whether to load audio encoder.
+     *
+     * @param loadAudioEncoder Whether to load audio encoder
+     * @return This builder instance for method chaining
+     */
+    public Builder loadAudioEncoder(boolean loadAudioEncoder) {
+      this.loadAudioEncoder = loadAudioEncoder;
       return this;
     }
 

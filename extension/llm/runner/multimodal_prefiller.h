@@ -49,7 +49,9 @@ class ET_EXPERIMENTAL MultimodalPrefiller {
       int32_t bos = 0,
       int32_t eos = 0);
 
-  virtual Error load();
+  virtual Error load(
+      bool load_vision_encoder = true,
+      bool load_audio_encoder = true);
   virtual bool is_method_loaded();
 
   virtual ~MultimodalPrefiller() = default;
@@ -64,6 +66,7 @@ class ET_EXPERIMENTAL MultimodalPrefiller {
   Tokenizer* tokenizer_;
   IOManager* io_manager_;
   int64_t prefill_chunk_size_;
+  bool loaded_ = false;
 };
 
 } // namespace executorch::extension::llm

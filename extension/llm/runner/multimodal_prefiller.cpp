@@ -276,7 +276,9 @@ Result<uint64_t> MultimodalPrefiller::prefill(
  * Load the Module for encoder prefill purpose.
  * @return The error code.
  */
-::executorch::runtime::Error MultimodalPrefiller::load() {
+::executorch::runtime::Error MultimodalPrefiller::load(
+    bool load_vision_encoder,
+    bool load_audio_encoder) {
   if (is_method_loaded()) {
     return ::executorch::runtime::Error::Ok;
   }
@@ -290,14 +292,17 @@ Result<uint64_t> MultimodalPrefiller::prefill(
   std::unordered_set<std::string> methods = method_names_result.get();
 
   // Load image_encoder method if exists.
-  if (methods.find(kVisionEncoderMethod) != methods.end()) {
+  if (load_vision_encoder &&
+      methods.find(kVisionEncoderMethod) != methods.end()) {
     ET_CHECK_OK_OR_RETURN_ERROR(module_->load_method(kVisionEncoderMethod));
   }
 
-  if (methods.find(kAudioEncoderMethod) != methods.end()) {
+  if (load_audio_encoder &&
+      methods.find(kAudioEncoderMethod) != methods.end()) {
     ET_CHECK_OK_OR_RETURN_ERROR(module_->load_method(kAudioEncoderMethod));
   }
 
+  loaded_ = true;
   return ::executorch::runtime::Error::Ok;
 }
 
@@ -306,20 +311,14 @@ Result<uint64_t> MultimodalPrefiller::prefill(
  * @return True if the Module is loaded, false otherwise.
  */
 bool MultimodalPrefiller::is_method_loaded() {
-  ::executorch::runtime::Result<std::unordered_set<std::string>> methods_res =
-      module_->method_names();
+  if (!loaded_) {
+    return false;
+  }
   if (!module_->is_method_loaded(kTokenEmbeddingMethod)) {
     return false;
   }
   if (!module_->is_method_loaded(kTextModelMethod)) {
     return false;
-  }
-  if (methods_res.error() != ::executorch::runtime::Error::Ok) {
-    ET_CHECK_MSG(false, "Failed to get method names");
-  }
-  std::unordered_set<std::string> methods = methods_res.get();
-  if (methods.find(kVisionEncoderMethod) != methods.end()) {
-    return module_->is_method_loaded(kVisionEncoderMethod);
   }
   return true;
 }

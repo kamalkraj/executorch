@@ -68,6 +68,17 @@ class PyMultimodalRunner {
     }
   }
 
+  void load(bool load_vision_encoder = true, bool load_audio_encoder = true) {
+    if (!runner_) {
+      throw std::runtime_error("Runner not initialized");
+    }
+    {
+      py::gil_scoped_release release;
+      Error error = runner_->load(load_vision_encoder, load_audio_encoder);
+      THROW_IF_ERROR(error, "Load failed");
+    }
+  }
+
   void generate(
       const std::vector<MultimodalInput>& inputs,
       const GenerationConfig& config,
@@ -620,6 +631,12 @@ PYBIND11_MODULE(_llm_runner, m) {
           py::arg("data_path") = py::none(),
           py::arg("prefill_chunk_size") = py::none(),
           "Initialize a MultimodalRunner with model and tokenizer paths")
+      .def(
+          "load",
+          &PyMultimodalRunner::load,
+          py::arg("load_vision_encoder") = true,
+          py::arg("load_audio_encoder") = true,
+          "Load the model components")
       .def(
           "generate",
           &PyMultimodalRunner::generate,

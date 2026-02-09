@@ -106,7 +106,9 @@ class ET_EXPERIMENTAL MultimodalRunner {
       std::unique_ptr<Stats> stats);
 
   virtual bool is_loaded();
-  virtual ::executorch::runtime::Error load();
+  virtual ::executorch::runtime::Error load(
+      bool load_vision_encoder = true,
+      bool load_audio_encoder = true);
 
   /**
    * Generate tokens from the given multimodal inputs using GenerationConfig.

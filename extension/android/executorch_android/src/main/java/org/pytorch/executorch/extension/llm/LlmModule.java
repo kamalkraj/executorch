@@ -46,7 +46,9 @@ public class LlmModule {
       List<String> dataFiles,
       int numBos,
       int numEos,
-      int prefillChunkSize);
+      int prefillChunkSize,
+      boolean loadVisionEncoder,
+      boolean loadAudioEncoder);
 
   /**
    * Constructs a LLM Module for a model with given type, model path, tokenizer, temperature, and
@@ -87,6 +89,36 @@ public class LlmModule {
       int numBos,
       int numEos,
       int prefillChunkSize) {
+    this(
+        modelType,
+        modulePath,
+        tokenizerPath,
+        temperature,
+        topp,
+        dataFiles,
+        numBos,
+        numEos,
+        prefillChunkSize,
+        true,
+        true);
+  }
+
+  /**
+   * Constructs a LLM Module for a model with given type, model path, tokenizer, temperature,
+   * dataFiles, BOS/EOS counts, prefill chunk size, and load encoder flags.
+   */
+  public LlmModule(
+      int modelType,
+      String modulePath,
+      String tokenizerPath,
+      float temperature,
+      float topp,
+      List<String> dataFiles,
+      int numBos,
+      int numEos,
+      int prefillChunkSize,
+      boolean loadVisionEncoder,
+      boolean loadAudioEncoder) {
     ExecuTorchRuntime runtime = ExecuTorchRuntime.getRuntime();
 
     File modelFile = new File(modulePath);
@@ -108,7 +140,9 @@ public class LlmModule {
             dataFiles,
             numBos,
             numEos,
-            prefillChunkSize);
+            prefillChunkSize,
+            loadVisionEncoder,
+            loadAudioEncoder);
   }
 
   /**
@@ -221,7 +255,9 @@ public class LlmModule {
         config.getDataPath() != null ? List.of(config.getDataPath()) : List.of(),
         config.getNumBos(),
         config.getNumEos(),
-        config.getPrefillChunkSize());
+        config.getPrefillChunkSize(),
+        config.getLoadVisionEncoder(),
+        config.getLoadAudioEncoder());
   }
 
   public void resetNative() {
@@ -615,5 +651,14 @@ public class LlmModule {
 
   /** Force loading the module. Otherwise the model is loaded during first generate(). */
   @DoNotStrip
-  public native int load();
+  public int load() {
+    return load(true, true);
+  }
+
+  /**
+   * Force loading the module with specified encoder flags. Otherwise the model is loaded during
+   * first generate().
+   */
+  @DoNotStrip
+  public native int load(boolean loadVisionEncoder, boolean loadAudioEncoder);
 }

@@ -58,12 +58,13 @@ bool MultimodalRunner::is_loaded() {
       text_token_generator_->is_loaded();
 }
 
-Error MultimodalRunner::load() {
+Error MultimodalRunner::load(bool load_vision_encoder, bool load_audio_encoder) {
   if (is_loaded()) {
     return Error::Ok;
   }
   stats_->model_load_start_ms = time_in_ms();
-  ET_CHECK_OK_OR_RETURN_ERROR(multimodal_prefiller_->load());
+  ET_CHECK_OK_OR_RETURN_ERROR(
+      multimodal_prefiller_->load(load_vision_encoder, load_audio_encoder));
   ET_CHECK_OK_OR_RETURN_ERROR(text_token_generator_->load());
   stats_->model_load_end_ms = time_in_ms();
 

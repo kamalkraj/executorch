@@ -124,6 +124,8 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
   float topp_ = 0.9f;
   int num_bos_ = 0;
   int num_eos_ = 0;
+  bool load_vision_encoder_ = true;
+  bool load_audio_encoder_ = true;
   int model_type_category_;
   std::unique_ptr<llm::IRunner> runner_;
   std::unique_ptr<executorch::extension::llm::MultimodalRunner>
@@ -150,7 +152,9 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
           data_files,
       jint num_bos,
       jint num_eos,
-      jint prefill_chunk_size) {
+      jint prefill_chunk_size,
+      jboolean load_vision_encoder,
+      jboolean load_audio_encoder) {
     return makeCxxInstance(
         model_type_category,
         model_path,
@@ -160,7 +164,9 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
         data_files,
         num_bos,
         num_eos,
-        prefill_chunk_size);
+        prefill_chunk_size,
+        load_vision_encoder,
+        load_audio_encoder);
   }
 
   ExecuTorchLlmJni(
@@ -172,11 +178,15 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
       facebook::jni::alias_ref<jobject> data_files = nullptr,
       jint num_bos = 0,
       jint num_eos = 0,
-      jint prefill_chunk_size = 0) {
+      jint prefill_chunk_size = 0,
+      jboolean load_vision_encoder = true,
+      jboolean load_audio_encoder = true) {
     temperature_ = temperature;
     topp_ = topp;
     num_bos_ = num_bos;
     num_eos_ = num_eos;
+    load_vision_encoder_ = load_vision_encoder;
+    load_audio_encoder_ = load_audio_encoder;
 #if defined(ET_USE_THREADPOOL)
     // Reserve 1 thread for the main thread.
     int32_t num_performant_cores =
@@ -274,6 +284,15 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
           .num_bos = num_bos,
           .num_eos = num_eos,
       };
+
+      if (!multi_modal_runner_->is_loaded()) {
+        Error err = multi_modal_runner_->load(
+            load_vision_encoder_, load_audio_encoder_);
+        if (err != Error::Ok) {
+          return static_cast<jint>(err);
+        }
+      }
+
       multi_modal_runner_->generate(
           std::move(inputs),
           config,
@@ -288,6 +307,14 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
           .num_bos = num_bos,
           .num_eos = num_eos,
       };
+
+      if (!runner_->is_loaded()) {
+        Error err = runner_->load();
+        if (err != Error::Ok) {
+          return static_cast<jint>(err);
+        }
+      }
+
       runner_->generate(
           prompt->toStdString(),
           config,
@@ -456,12 +483,13 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
     }
   }
 
-  jint load() {
+  jint load(jboolean load_vision_encoder, jboolean load_audio_encoder) {
     int result = -1;
     std::stringstream ss;
 
     if (model_type_category_ == MODEL_TYPE_CATEGORY_MULTIMODAL) {
-      result = static_cast<jint>(multi_modal_runner_->load());
+      result = static_cast<jint>(
+          multi_modal_runner_->load(load_vision_encoder, load_audio_encoder));
       if (result != 0) {
         ss << "Failed to load multimodal runner: [" << result << "]";
       }
