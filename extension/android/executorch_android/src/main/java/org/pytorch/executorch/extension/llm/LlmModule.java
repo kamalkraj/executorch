@@ -30,6 +30,7 @@ public class LlmModule {
 
   private final HybridData mHybridData;
   private static final int DEFAULT_SEQ_LEN = 128;
+  private static final int DEFAULT_MAX_NEW_TOKENS = -1;
   private static final boolean DEFAULT_ECHO = true;
   private static final float DEFAULT_TEMPERATURE = -1.0f;
   private static final float DEFAULT_TOPP = -1.0f;
@@ -274,6 +275,7 @@ public class LlmModule {
     return generate(
         prompt,
         DEFAULT_SEQ_LEN,
+        DEFAULT_MAX_NEW_TOKENS,
         llmCallback,
         DEFAULT_ECHO,
         DEFAULT_TEMPERATURE,
@@ -293,6 +295,7 @@ public class LlmModule {
     return generate(
         prompt,
         seqLen,
+        DEFAULT_MAX_NEW_TOKENS,
         llmCallback,
         DEFAULT_ECHO,
         DEFAULT_TEMPERATURE,
@@ -334,7 +337,15 @@ public class LlmModule {
    */
   public int generate(String prompt, int seqLen, LlmCallback llmCallback, boolean echo) {
     return generate(
-        prompt, seqLen, llmCallback, echo, DEFAULT_TEMPERATURE, DEFAULT_TOPP, DEFAULT_BOS, DEFAULT_EOS);
+        prompt,
+        seqLen,
+        DEFAULT_MAX_NEW_TOKENS,
+        llmCallback,
+        echo,
+        DEFAULT_TEMPERATURE,
+        DEFAULT_TOPP,
+        DEFAULT_BOS,
+        DEFAULT_EOS);
   }
 
   /**
@@ -342,6 +353,7 @@ public class LlmModule {
    *
    * @param prompt Input prompt
    * @param seqLen sequence length
+   * @param maxNewTokens maximum new tokens to generate
    * @param llmCallback callback object to receive results
    * @param echo indicate whether to echo the input prompt or not (text completion vs chat)
    * @param temperature temperature for sampling (use negative value to use module default)
@@ -351,6 +363,7 @@ public class LlmModule {
   public native int generate(
       String prompt,
       int seqLen,
+      int maxNewTokens,
       LlmCallback llmCallback,
       boolean echo,
       float temperature,
@@ -367,13 +380,14 @@ public class LlmModule {
    */
   public int generate(String prompt, LlmGenerationConfig config, LlmCallback llmCallback) {
     int seqLen = config.getSeqLen();
+    int maxNewTokens = config.getMaxNewTokens();
     boolean echo = config.isEcho();
     float temperature = config.getTemperature();
     float topp = config.getTopp();
     int numBos = config.getNumBos();
     int numEos = config.getNumEos();
     return generate(
-        null, 0, 0, 0, prompt, seqLen, llmCallback, echo, temperature, topp, numBos, numEos);
+        null, 0, 0, 0, prompt, seqLen, maxNewTokens, llmCallback, echo, temperature, topp, numBos, numEos);
   }
 
   /**
@@ -482,7 +496,62 @@ public class LlmModule {
     if (image != null) {
       prefillImages(image, width, height, channels);
     }
-    return generate(prompt, seqLen, llmCallback, echo, temperature, topp, numBos, numEos);
+    return generate(
+        prompt,
+        seqLen,
+        DEFAULT_MAX_NEW_TOKENS,
+        llmCallback,
+        echo,
+        temperature,
+        topp,
+        numBos,
+        numEos);
+  }
+
+  /**
+   * Start generating tokens from the module.
+   *
+   * @param image Input image as a byte array
+   * @param width Input image width
+   * @param height Input image height
+   * @param channels Input image number of channels
+   * @param prompt Input prompt
+   * @param seqLen sequence length
+   * @param maxNewTokens maximum new tokens to generate
+   * @param llmCallback callback object to receive results.
+   * @param echo indicate whether to echo the input prompt or not (text completion vs chat)
+   * @param temperature temperature for sampling (use negative value to use module default)
+   * @param numBos number of BOS tokens to prepend
+   * @param numEos number of EOS tokens to append
+   */
+  public int generate(
+      int[] image,
+      int width,
+      int height,
+      int channels,
+      String prompt,
+      int seqLen,
+      int maxNewTokens,
+      LlmCallback llmCallback,
+      boolean echo,
+      float temperature,
+      float topp,
+      int numBos,
+      int numEos) {
+    prefillPrompt(prompt);
+    if (image != null) {
+      prefillImages(image, width, height, channels);
+    }
+    return generate(
+        prompt,
+        seqLen,
+        maxNewTokens,
+        llmCallback,
+        echo,
+        temperature,
+        topp,
+        numBos,
+        numEos);
   }
 
   /**

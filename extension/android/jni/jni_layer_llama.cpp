@@ -262,6 +262,7 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
   jint generate(
       facebook::jni::alias_ref<jstring> prompt,
       jint seq_len,
+      jint max_new_tokens,
       facebook::jni::alias_ref<ExecuTorchLlmCallbackJni> callback,
       jboolean echo,
       jfloat temperature,
@@ -278,6 +279,7 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
       }
       executorch::extension::llm::GenerationConfig config{
           .echo = static_cast<bool>(echo),
+          .max_new_tokens = max_new_tokens,
           .seq_len = seq_len,
           .temperature = effective_temperature,
           .topp = effective_topp,
@@ -301,6 +303,7 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
     } else if (model_type_category_ == MODEL_TYPE_CATEGORY_LLM) {
       executorch::extension::llm::GenerationConfig config{
           .echo = static_cast<bool>(echo),
+          .max_new_tokens = max_new_tokens,
           .seq_len = seq_len,
           .temperature = effective_temperature,
           .topp = effective_topp,
