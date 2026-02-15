@@ -23,6 +23,8 @@ public class LlmModuleConfig {
   private final int numBos;
   private final int numEos;
   private final int prefillChunkSize;
+  private final int maxSeqLen;
+  private final int maxContextLen;
   private final boolean loadVisionEncoder;
   private final boolean loadAudioEncoder;
 
@@ -36,6 +38,8 @@ public class LlmModuleConfig {
     this.numBos = builder.numBos;
     this.numEos = builder.numEos;
     this.prefillChunkSize = builder.prefillChunkSize;
+    this.maxSeqLen = builder.maxSeqLen;
+    this.maxContextLen = builder.maxContextLen;
     this.loadVisionEncoder = builder.loadVisionEncoder;
     this.loadAudioEncoder = builder.loadAudioEncoder;
   }
@@ -123,6 +127,20 @@ public class LlmModuleConfig {
   }
 
   /**
+   * @return Max sequence length (metadata override). 0 means use model default.
+   */
+  public int getMaxSeqLen() {
+    return maxSeqLen;
+  }
+
+  /**
+   * @return Max context length (metadata override). 0 means use model default.
+   */
+  public int getMaxContextLen() {
+    return maxContextLen;
+  }
+
+  /**
    * @return Whether to load vision encoder
    */
   public boolean getLoadVisionEncoder() {
@@ -152,6 +170,8 @@ public class LlmModuleConfig {
     private int numBos = 0;
     private int numEos = 0;
     private int prefillChunkSize = 0;
+    private int maxSeqLen = 0;
+    private int maxContextLen = 0;
     private boolean loadVisionEncoder = true;
     private boolean loadAudioEncoder = true;
 
@@ -253,6 +273,28 @@ public class LlmModuleConfig {
      */
     public Builder prefillChunkSize(int prefillChunkSize) {
       this.prefillChunkSize = prefillChunkSize;
+      return this;
+    }
+
+    /**
+     * Sets the max sequence length (metadata override).
+     *
+     * @param maxSeqLen Max sequence length.
+     * @return This builder instance for method chaining
+     */
+    public Builder maxSeqLen(int maxSeqLen) {
+      this.maxSeqLen = maxSeqLen;
+      return this;
+    }
+
+    /**
+     * Sets the max context length (metadata override).
+     *
+     * @param maxContextLen Max context length.
+     * @return This builder instance for method chaining
+     */
+    public Builder maxContextLen(int maxContextLen) {
+      this.maxContextLen = maxContextLen;
       return this;
     }
 

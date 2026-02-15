@@ -124,7 +124,9 @@ ET_EXPERIMENTAL std::unique_ptr<TextLLMRunner> create_text_llm_runner(
     std::unique_ptr<::tokenizers::Tokenizer> tokenizer,
     std::vector<std::string> data_files = {},
     float temperature = -1.0f,
-    std::unique_ptr<::executorch::runtime::EventTracer> event_tracer = nullptr);
+    std::unique_ptr<::executorch::runtime::EventTracer> event_tracer = nullptr,
+    std::optional<int32_t> max_seq_len = std::nullopt,
+    std::optional<int32_t> max_context_len = std::nullopt);
 
 /**
  * @brief Creates a MultimodalRunner instance with dependency injection
@@ -143,6 +145,8 @@ ET_EXPERIMENTAL std::unique_ptr<MultimodalRunner> create_multimodal_runner(
     std::unique_ptr<::tokenizers::Tokenizer> tokenizer,
     std::optional<const std::string> data_path = std::nullopt,
     Module::LoadMode load_mode = Module::LoadMode::File,
-    std::optional<int32_t> prefill_chunk_size = std::nullopt);
+    std::optional<int32_t> prefill_chunk_size = std::nullopt,
+    std::optional<int32_t> max_seq_len = std::nullopt,
+    std::optional<int32_t> max_context_len = std::nullopt);
 
 } // namespace executorch::extension::llm

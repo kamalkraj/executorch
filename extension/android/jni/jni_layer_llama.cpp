@@ -154,7 +154,9 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
       jint num_eos,
       jint prefill_chunk_size,
       jboolean load_vision_encoder,
-      jboolean load_audio_encoder) {
+      jboolean load_audio_encoder,
+      jint max_seq_len,
+      jint max_context_len) {
     return makeCxxInstance(
         model_type_category,
         model_path,
@@ -166,7 +168,9 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
         num_eos,
         prefill_chunk_size,
         load_vision_encoder,
-        load_audio_encoder);
+        load_audio_encoder,
+        max_seq_len,
+        max_context_len);
   }
 
   ExecuTorchLlmJni(
@@ -180,7 +184,9 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
       jint num_eos = 0,
       jint prefill_chunk_size = 0,
       jboolean load_vision_encoder = true,
-      jboolean load_audio_encoder = true) {
+      jboolean load_audio_encoder = true,
+      jint max_seq_len = 0,
+      jint max_context_len = 0) {
     temperature_ = temperature;
     topp_ = topp;
     num_bos_ = num_bos;
@@ -200,6 +206,15 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
 
     model_type_category_ = model_type_category;
     std::vector<std::string> data_files_vector;
+    std::optional<int32_t> max_seq_len_opt = std::nullopt;
+    if (max_seq_len > 0) {
+      max_seq_len_opt = max_seq_len;
+    }
+    std::optional<int32_t> max_context_len_opt = std::nullopt;
+    if (max_context_len > 0) {
+      max_context_len_opt = max_context_len;
+    }
+
     if (model_type_category == MODEL_TYPE_CATEGORY_MULTIMODAL) {
       std::optional<int32_t> prefill_chunk_size_opt = std::nullopt;
       if (prefill_chunk_size > 0) {
@@ -210,7 +225,9 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
           llm::load_tokenizer(tokenizer_path->toStdString()),
           std::nullopt,
           executorch::extension::Module::LoadMode::File,
-          prefill_chunk_size_opt);
+          prefill_chunk_size_opt,
+          max_seq_len_opt,
+          max_context_len_opt);
     } else if (model_type_category == MODEL_TYPE_CATEGORY_LLM) {
       if (data_files != nullptr) {
         // Convert Java List<String> to C++ std::vector<string>
@@ -230,7 +247,11 @@ class ExecuTorchLlmJni : public facebook::jni::HybridClass<ExecuTorchLlmJni> {
       runner_ = executorch::extension::llm::create_text_llm_runner(
           model_path->toStdString(),
           llm::load_tokenizer(tokenizer_path->toStdString()),
-          data_files_vector);
+          data_files_vector,
+          -1.0f, // temperature (deprecated/unused in runner creation)
+          nullptr, // event_tracer
+          max_seq_len_opt,
+          max_context_len_opt);
 #if defined(EXECUTORCH_BUILD_QNN)
     } else if (model_type_category == MODEL_TYPE_QNN_LLAMA) {
       std::unique_ptr<executorch::extension::Module> module = std::make_unique<

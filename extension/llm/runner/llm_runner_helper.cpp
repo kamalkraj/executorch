@@ -201,7 +201,9 @@ std::unique_ptr<TextLLMRunner> create_text_llm_runner(
     std::unique_ptr<::tokenizers::Tokenizer> tokenizer,
     std::vector<std::string> data_files,
     float temperature,
-    std::unique_ptr<::executorch::runtime::EventTracer> event_tracer) {
+    std::unique_ptr<::executorch::runtime::EventTracer> event_tracer,
+    std::optional<int32_t> max_seq_len,
+    std::optional<int32_t> max_context_len) {
   // Sanity check tokenizer
   if (!tokenizer || !tokenizer->is_loaded()) {
     ET_LOG(Error, "Tokenizer is null or not loaded");
@@ -229,6 +231,15 @@ std::unique_ptr<TextLLMRunner> create_text_llm_runner(
     return nullptr;
   }
   auto metadata = metadata_result.get();
+
+  if (max_seq_len.has_value()) {
+    metadata[kMaxSeqLen] = max_seq_len.value();
+    ET_LOG(Info, "Overriding kMaxSeqLen to %d", max_seq_len.value());
+  }
+  if (max_context_len.has_value()) {
+    metadata[kMaxContextLen] = max_context_len.value();
+    ET_LOG(Info, "Overriding kMaxContextLen to %d", max_context_len.value());
+  }
 
   auto eos_ids = std::make_unique<std::unordered_set<uint64_t>>(
       llm::get_eos_ids(tokenizer.get(), module.get()));
@@ -275,7 +286,9 @@ std::unique_ptr<MultimodalRunner> create_multimodal_runner(
     std::unique_ptr<::tokenizers::Tokenizer> tokenizer,
     std::optional<const std::string> data_path,
     Module::LoadMode load_mode,
-    std::optional<int32_t> prefill_chunk_size) {
+    std::optional<int32_t> prefill_chunk_size,
+    std::optional<int32_t> max_seq_len,
+    std::optional<int32_t> max_context_len) {
   // Sanity check tokenizer
   if (!tokenizer || !tokenizer->is_loaded()) {
     ET_LOG(Error, "Tokenizer is null or not loaded");
@@ -298,6 +311,15 @@ std::unique_ptr<MultimodalRunner> create_multimodal_runner(
     return nullptr;
   }
   auto metadata = metadata_result.get();
+
+  if (max_seq_len.has_value()) {
+    metadata[kMaxSeqLen] = max_seq_len.value();
+    ET_LOG(Info, "Overriding kMaxSeqLen to %d", max_seq_len.value());
+  }
+  if (max_context_len.has_value()) {
+    metadata[kMaxContextLen] = max_context_len.value();
+    ET_LOG(Info, "Overriding kMaxContextLen to %d", max_context_len.value());
+  }
 
   auto eos_ids = std::make_unique<std::unordered_set<uint64_t>>(
       get_eos_ids(tokenizer.get(), module.get()));

@@ -49,7 +49,9 @@ public class LlmModule {
       int numEos,
       int prefillChunkSize,
       boolean loadVisionEncoder,
-      boolean loadAudioEncoder);
+      boolean loadAudioEncoder,
+      int maxSeqLen,
+      int maxContextLen);
 
   /**
    * Constructs a LLM Module for a model with given type, model path, tokenizer, temperature, and
@@ -120,6 +122,41 @@ public class LlmModule {
       int prefillChunkSize,
       boolean loadVisionEncoder,
       boolean loadAudioEncoder) {
+    this(
+        modelType,
+        modulePath,
+        tokenizerPath,
+        temperature,
+        topp,
+        dataFiles,
+        numBos,
+        numEos,
+        prefillChunkSize,
+        loadVisionEncoder,
+        loadAudioEncoder,
+        0,
+        0);
+  }
+
+  /**
+   * Constructs a LLM Module for a model with given type, model path, tokenizer, temperature,
+   * dataFiles, BOS/EOS counts, prefill chunk size, load encoder flags, and max sequence length
+   * overrides.
+   */
+  public LlmModule(
+      int modelType,
+      String modulePath,
+      String tokenizerPath,
+      float temperature,
+      float topp,
+      List<String> dataFiles,
+      int numBos,
+      int numEos,
+      int prefillChunkSize,
+      boolean loadVisionEncoder,
+      boolean loadAudioEncoder,
+      int maxSeqLen,
+      int maxContextLen) {
     ExecuTorchRuntime runtime = ExecuTorchRuntime.getRuntime();
 
     File modelFile = new File(modulePath);
@@ -143,7 +180,9 @@ public class LlmModule {
             numEos,
             prefillChunkSize,
             loadVisionEncoder,
-            loadAudioEncoder);
+            loadAudioEncoder,
+            maxSeqLen,
+            maxContextLen);
   }
 
   /**
@@ -258,7 +297,9 @@ public class LlmModule {
         config.getNumEos(),
         config.getPrefillChunkSize(),
         config.getLoadVisionEncoder(),
-        config.getLoadAudioEncoder());
+        config.getLoadAudioEncoder(),
+        config.getMaxSeqLen(),
+        config.getMaxContextLen());
   }
 
   public void resetNative() {
